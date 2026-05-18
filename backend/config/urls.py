@@ -6,11 +6,11 @@ from django.http import HttpResponse
 import os
 
 def serve_react(request, *args, **kwargs):
-    index_path = os.path.join(settings.BASE_DIR.parent, 'frontend', 'build', 'index.html')
+    index_path = os.path.join(settings.BASE_DIR, 'frontend_build', 'index.html')
     if os.path.exists(index_path):
         with open(index_path, 'r') as f:
             return HttpResponse(f.read(), content_type='text/html')
-    return HttpResponse('Frontend not built. Run: cd frontend && npm run build', status=404)
+    return HttpResponse('Frontend not built.', status=404)
 
 urlpatterns = [
     path('admin/', admin.site.urls),

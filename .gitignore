@@ -23,3 +23,6 @@ frontend/.env.production
 .idea/
 *.swp
 .DS_Store
+
+# Keep backend/frontend_build committed for Railway deployment
+!backend/frontend_build/
