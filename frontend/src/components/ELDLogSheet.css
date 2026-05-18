@@ -70,7 +70,6 @@
   font-family: 'Inter', sans-serif;
 }
 
-/* Canvas */
 .canvas-wrapper {
   overflow-x: auto;
   padding: 14px 18px 8px;
@@ -80,7 +79,7 @@
 .eld-canvas {
   display: block;
   max-width: 100%;
-  border-radius: 5px;
+  border-radius: 6px;
   border: 1px solid var(--border);
 }
 
@@ -106,9 +105,9 @@
   font-family: 'Inter', sans-serif;
 }
 
-.st-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.st-dot, .st-swatch { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
 .st-label { color: var(--text-muted); }
-.st-hrs { font-weight: 600; color: var(--text); }
+.st-hrs { font-weight: 600; color: var(--text); margin-left: 2px; }
 
 .duty-totals { display: flex; gap: 16px; }
 
@@ -161,6 +160,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.remark-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-.remark-status { font-weight: 500; color: var(--text); min-width: 130px; }
+.remark-dot, .remark-swatch { width: 8px; height: 8px; border-radius: 2px; display: inline-block; flex-shrink: 0; }
+.remark-status { font-weight: 600; min-width: 130px; font-size: 0.72rem; }
 .remark-note { color: var(--text-muted); flex: 1; }
