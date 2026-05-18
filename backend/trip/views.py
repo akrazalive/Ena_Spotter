@@ -9,25 +9,35 @@ SERPAPI_KEY = settings.SERPAPI_KEY
 
 
 def serpapi_autocomplete(query):
-    """Return place suggestions with lat/lon using SerpAPI Google Maps Autocomplete."""
+    """Return place suggestions using Nominatim autocomplete (free, worldwide, no key needed)."""
     try:
         resp = requests.get(
-            'https://serpapi.com/search',
+            'https://nominatim.openstreetmap.org/search',
             params={
-                'engine': 'google_maps_autocomplete',
                 'q': query,
-                'api_key': SERPAPI_KEY,
+                'format': 'json',
+                'limit': 7,
+                'addressdetails': 1,
             },
-            timeout=8,
+            headers={'User-Agent': 'ELDTripPlanner/1.0'},
+            timeout=6,
         )
         data = resp.json()
         suggestions = []
-        for s in data.get('suggestions', []):
+        for item in data:
+            addr = item.get('address', {})
+            # Build a clean label
+            parts = []
+            for key in ('city', 'town', 'village', 'county', 'state', 'country'):
+                if addr.get(key):
+                    parts.append(addr[key])
+            label = parts[0] if parts else item.get('display_name', query).split(',')[0]
+            subtext = ', '.join(parts[1:4]) if len(parts) > 1 else item.get('display_name', '').split(',', 1)[-1].strip()
             suggestions.append({
-                'label': s.get('value', ''),
-                'subtext': s.get('subtext', ''),
-                'lat': s.get('latitude'),
-                'lon': s.get('longitude'),
+                'label': label,
+                'subtext': subtext[:60],
+                'lat': float(item['lat']),
+                'lon': float(item['lon']),
             })
         return suggestions
     except Exception:
