@@ -1,5 +1,9 @@
 # ELD Trip Planner
 
+**Live Demo:** https://web-production-9d80.up.railway.app/
+
+**GitHub:** https://github.com/akrazalive/Ena_Spotter
+
 A full-stack web application for truck drivers to plan trips and automatically generate ELD (Electronic Logging Device) daily log sheets that comply with FMCSA Hours of Service (HOS) regulations.
 
 Built as part of the EnaSpotter AI technical assessment.
@@ -123,7 +127,9 @@ npm start
 
 The app is configured for **Railway.app** (backend) + **Vercel** (frontend), or as a single deployment where Django serves the React build.
 
-### Single deployment (Railway)
+### Single deployment (Railway) — currently live
+The app is deployed at **https://web-production-9d80.up.railway.app/**
+
 Railway auto-detects `nixpacks.toml` which:
 1. Installs Python and Node
 2. Runs `npm run build` to compile the React app
