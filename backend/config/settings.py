@@ -84,3 +84,4 @@ REST_FRAMEWORK = {
 }
 
 ORS_API_KEY = os.environ.get('ORS_API_KEY', '')
+SERPAPI_KEY = os.environ.get('SERPAPI_KEY', 'd195df3012a19bc5bdb52e20d1610a879240f525ba11187b61768faac562c903')

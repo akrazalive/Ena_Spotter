@@ -2,22 +2,80 @@ import requests
 import math
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status
 from django.conf import settings
 from .hos_calculator import calculate_trip
 
+SERPAPI_KEY = settings.SERPAPI_KEY
 
-def geocode_location(location_str):
-    """Geocode a location string using Nominatim (free, no key needed)."""
-    url = "https://nominatim.openstreetmap.org/search"
-    params = {
-        'q': location_str,
-        'format': 'json',
-        'limit': 1,
-    }
-    headers = {'User-Agent': 'ELDTripPlanner/1.0'}
+
+def serpapi_autocomplete(query):
+    """Return place suggestions with lat/lon using SerpAPI Google Maps Autocomplete."""
     try:
-        resp = requests.get(url, params=params, headers=headers, timeout=10)
+        resp = requests.get(
+            'https://serpapi.com/search',
+            params={
+                'engine': 'google_maps_autocomplete',
+                'q': query,
+                'api_key': SERPAPI_KEY,
+            },
+            timeout=8,
+        )
+        data = resp.json()
+        suggestions = []
+        for s in data.get('suggestions', []):
+            suggestions.append({
+                'label': s.get('value', ''),
+                'subtext': s.get('subtext', ''),
+                'lat': s.get('latitude'),
+                'lon': s.get('longitude'),
+            })
+        return suggestions
+    except Exception:
+        return []
+
+
+def serpapi_geocode(location_str):
+    """Geocode a location string via SerpAPI Google Maps search. Returns (lat, lon, display_name)."""
+    try:
+        resp = requests.get(
+            'https://serpapi.com/search',
+            params={
+                'engine': 'google_maps',
+                'q': location_str,
+                'type': 'search',
+                'api_key': SERPAPI_KEY,
+            },
+            timeout=10,
+        )
+        data = resp.json()
+        # Try place_results first (most accurate)
+        place = data.get('place_results')
+        if place and place.get('gps_coordinates'):
+            coords = place['gps_coordinates']
+            return coords['latitude'], coords['longitude'], place.get('title', location_str)
+        # Fall back to first local result
+        local = data.get('local_results', [])
+        if local:
+            first = local[0]
+            coords = first.get('gps_coordinates', {})
+            if coords.get('latitude'):
+                return coords['latitude'], coords['longitude'], first.get('title', location_str)
+    except Exception:
+        pass
+
+    # Final fallback: Nominatim
+    return nominatim_geocode(location_str)
+
+
+def nominatim_geocode(location_str):
+    """Fallback geocoder using Nominatim."""
+    try:
+        resp = requests.get(
+            'https://nominatim.openstreetmap.org/search',
+            params={'q': location_str, 'format': 'json', 'limit': 1},
+            headers={'User-Agent': 'ELDTripPlanner/1.0'},
+            timeout=8,
+        )
         data = resp.json()
         if data:
             return float(data[0]['lat']), float(data[0]['lon']), data[0].get('display_name', location_str)
@@ -27,35 +85,36 @@ def geocode_location(location_str):
 
 
 def haversine_miles(lat1, lon1, lat2, lon2):
-    R = 3958.8  # Earth radius in miles
+    R = 3958.8
     phi1, phi2 = math.radians(lat1), math.radians(lat2)
     dphi = math.radians(lat2 - lat1)
     dlambda = math.radians(lon2 - lon1)
-    a = math.sin(dphi/2)**2 + math.cos(phi1)*math.cos(phi2)*math.sin(dlambda/2)**2
+    a = math.sin(dphi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2) ** 2
     return 2 * R * math.asin(math.sqrt(a))
 
 
 def get_osrm_route(coords):
-    """Get route from OSRM (free routing, no key needed)."""
+    """Get route from OSRM (free, no key needed)."""
     coord_str = ';'.join([f"{lon},{lat}" for lat, lon in coords])
     url = f"http://router.project-osrm.org/route/v1/driving/{coord_str}"
-    params = {
-        'overview': 'full',
-        'geometries': 'geojson',
-        'steps': 'true',
-    }
     try:
-        resp = requests.get(url, params=params, timeout=15)
+        resp = requests.get(url, params={'overview': 'full', 'geometries': 'geojson'}, timeout=15)
         data = resp.json()
         if data.get('code') == 'Ok':
             route = data['routes'][0]
-            distance_meters = route['distance']
-            distance_miles = distance_meters * 0.000621371
-            geometry = route['geometry']
-            return distance_miles, geometry
+            return route['distance'] * 0.000621371, route['geometry']
     except Exception:
         pass
     return None, None
+
+
+class AutocompleteView(APIView):
+    def get(self, request):
+        q = request.GET.get('q', '').strip()
+        if len(q) < 2:
+            return Response({'suggestions': []})
+        suggestions = serpapi_autocomplete(q)
+        return Response({'suggestions': suggestions})
 
 
 class TripPlanView(APIView):
@@ -66,21 +125,38 @@ class TripPlanView(APIView):
         dropoff_location = data.get('dropoff_location', '').strip()
         cycle_used = float(data.get('cycle_used_hrs', 0))
 
+        # Accept pre-resolved coords from frontend autocomplete selection
+        cur_lat = data.get('current_lat')
+        cur_lon = data.get('current_lon')
+        pick_lat = data.get('pickup_lat')
+        pick_lon = data.get('pickup_lon')
+        drop_lat = data.get('dropoff_lat')
+        drop_lon = data.get('dropoff_lon')
+
         if not all([current_location, pickup_location, dropoff_location]):
             return Response({'error': 'All location fields are required.'}, status=400)
-
         if cycle_used < 0 or cycle_used > 70:
             return Response({'error': 'Cycle used must be between 0 and 70 hours.'}, status=400)
 
-        # Geocode all locations
-        cur_lat, cur_lon, cur_display = geocode_location(current_location)
-        pick_lat, pick_lon, pick_display = geocode_location(pickup_location)
-        drop_lat, drop_lon, drop_display = geocode_location(dropoff_location)
+        # Geocode only if coords not already provided
+        cur_display = current_location
+        pick_display = pickup_location
+        drop_display = dropoff_location
+
+        if not (cur_lat and cur_lon):
+            cur_lat, cur_lon, cur_display = serpapi_geocode(current_location)
+        if not (pick_lat and pick_lon):
+            pick_lat, pick_lon, pick_display = serpapi_geocode(pickup_location)
+        if not (drop_lat and drop_lon):
+            drop_lat, drop_lon, drop_display = serpapi_geocode(dropoff_location)
 
         if not all([cur_lat, pick_lat, drop_lat]):
-            return Response({'error': 'Could not geocode one or more locations. Please be more specific.'}, status=400)
+            return Response({'error': 'Could not find one or more locations. Please try a more specific address.'}, status=400)
 
-        # Get routes
+        cur_lat, cur_lon = float(cur_lat), float(cur_lon)
+        pick_lat, pick_lon = float(pick_lat), float(pick_lon)
+        drop_lat, drop_lon = float(drop_lat), float(drop_lon)
+
         dist_to_pickup, geom1 = get_osrm_route([(cur_lat, cur_lon), (pick_lat, pick_lon)])
         dist_pickup_to_drop, geom2 = get_osrm_route([(pick_lat, pick_lon), (drop_lat, drop_lon)])
 
@@ -91,11 +167,7 @@ class TripPlanView(APIView):
 
         total_distance = dist_to_pickup + dist_pickup_to_drop
 
-        # Full route geometry
-        full_route_geom = None
         _, full_geom = get_osrm_route([(cur_lat, cur_lon), (pick_lat, pick_lon), (drop_lat, drop_lon)])
-        if full_geom:
-            full_route_geom = full_geom
 
         route_data = {
             'total_distance_miles': total_distance,
@@ -116,7 +188,7 @@ class TripPlanView(APIView):
         return Response({
             'route': {
                 'waypoints': route_data['waypoints'],
-                'geometry': full_route_geom,
+                'geometry': full_geom,
                 'total_distance_miles': round(total_distance, 1),
                 'dist_to_pickup_miles': round(dist_to_pickup, 1),
                 'dist_pickup_to_dropoff_miles': round(dist_pickup_to_drop, 1),

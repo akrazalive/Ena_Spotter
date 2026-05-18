@@ -1,31 +1,37 @@
 import React, { useState } from 'react';
+import LocationInput from './LocationInput';
 import './TripForm.css';
 
-export default function TripForm({ onSubmit, loading }) {
-  const [form, setForm] = useState({
-    current_location: '',
-    pickup_location: '',
-    dropoff_location: '',
-    cycle_used_hrs: '',
-  });
+const INITIAL = {
+  current:  { label: '', lat: null, lon: null },
+  pickup:   { label: '', lat: null, lon: null },
+  dropoff:  { label: '', lat: null, lon: null },
+  cycle:    '',
+};
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
+export default function TripForm({ onSubmit, loading }) {
+  const [form, setForm] = useState(INITIAL);
+
+  const setLoc = (field) => (val) => setForm(f => ({ ...f, [field]: val }));
 
   const handleSubmit = (e) => {
     e.preventDefault();
     onSubmit({
-      ...form,
-      cycle_used_hrs: parseFloat(form.cycle_used_hrs) || 0,
+      current_location:  form.current.label,
+      pickup_location:   form.pickup.label,
+      dropoff_location:  form.dropoff.label,
+      cycle_used_hrs:    parseFloat(form.cycle) || 0,
+      // pass resolved coords so backend skips geocoding
+      current_lat: form.current.lat,
+      current_lon: form.current.lon,
+      pickup_lat:  form.pickup.lat,
+      pickup_lon:  form.pickup.lon,
+      dropoff_lat: form.dropoff.lat,
+      dropoff_lon: form.dropoff.lon,
     });
   };
 
-  const fields = [
-    { name: 'current_location', label: 'Current Location', icon: '📍', placeholder: 'e.g. Chicago, IL' },
-    { name: 'pickup_location', label: 'Pickup Location', icon: '📦', placeholder: 'e.g. Indianapolis, IN' },
-    { name: 'dropoff_location', label: 'Dropoff Location', icon: '🏁', placeholder: 'e.g. Nashville, TN' },
-  ];
+  const cycleVal = parseFloat(form.cycle) || 0;
 
   return (
     <form className="trip-form" onSubmit={handleSubmit}>
@@ -34,24 +40,35 @@ export default function TripForm({ onSubmit, loading }) {
         <p>Enter your route information below</p>
       </div>
 
-      {fields.map((f) => (
-        <div className="form-group" key={f.name}>
-          <label htmlFor={f.name}>
-            <span className="field-icon">{f.icon}</span>
-            {f.label}
-          </label>
-          <input
-            id={f.name}
-            name={f.name}
-            type="text"
-            value={form[f.name]}
-            onChange={handleChange}
-            placeholder={f.placeholder}
-            required
-            autoComplete="off"
-          />
-        </div>
-      ))}
+      <LocationInput
+        id="current_location"
+        name="current_location"
+        label="Current Location"
+        icon="📍"
+        placeholder="e.g. Chicago, IL"
+        value={form.current}
+        onChange={setLoc('current')}
+      />
+
+      <LocationInput
+        id="pickup_location"
+        name="pickup_location"
+        label="Pickup Location"
+        icon="📦"
+        placeholder="e.g. Indianapolis, IN"
+        value={form.pickup}
+        onChange={setLoc('pickup')}
+      />
+
+      <LocationInput
+        id="dropoff_location"
+        name="dropoff_location"
+        label="Dropoff Location"
+        icon="🏁"
+        placeholder="e.g. Nashville, TN"
+        value={form.dropoff}
+        onChange={setLoc('dropoff')}
+      />
 
       <div className="form-group">
         <label htmlFor="cycle_used_hrs">
@@ -66,19 +83,16 @@ export default function TripForm({ onSubmit, loading }) {
             min="0"
             max="70"
             step="0.5"
-            value={form.cycle_used_hrs}
-            onChange={handleChange}
+            value={form.cycle}
+            onChange={e => setForm(f => ({ ...f, cycle: e.target.value }))}
             placeholder="0 – 70"
             required
           />
-          <span className="input-hint">Max 70 hrs / 8 days</span>
+          <span className="input-hint">Max 70 hrs</span>
         </div>
-        {form.cycle_used_hrs !== '' && (
+        {form.cycle !== '' && (
           <div className="cycle-bar">
-            <div
-              className="cycle-fill"
-              style={{ width: `${Math.min((parseFloat(form.cycle_used_hrs) / 70) * 100, 100)}%` }}
-            />
+            <div className="cycle-fill" style={{ width: `${Math.min((cycleVal / 70) * 100, 100)}%` }} />
           </div>
         )}
       </div>
@@ -96,11 +110,7 @@ export default function TripForm({ onSubmit, loading }) {
       </div>
 
       <button type="submit" className="submit-btn" disabled={loading}>
-        {loading ? (
-          <><span className="btn-spinner" /> Calculating...</>
-        ) : (
-          <><span>🚀</span> Plan Trip</>
-        )}
+        {loading ? <><span className="btn-spinner" /> Calculating...</> : <><span>🚀</span> Plan Trip</>}
       </button>
     </form>
   );
