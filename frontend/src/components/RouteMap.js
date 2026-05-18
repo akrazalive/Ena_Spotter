@@ -2,27 +2,26 @@ import React, { useEffect, useRef } from 'react';
 import './RouteMap.css';
 
 const STOP_COLORS = {
-  current: '#2563eb',
-  pickup: '#f59e0b',
-  dropoff: '#10b981',
-  fuel: '#8b5cf6',
-  rest: '#ef4444',
-  cycle_reset: '#ef4444',
+  current:     '#1e293b',
+  pickup:      '#f59e0b',
+  dropoff:     '#16a34a',
+  fuel:        '#7c3aed',
+  rest:        '#dc2626',
+  cycle_reset: '#dc2626',
 };
 
-const STOP_ICONS = {
-  current: '📍',
-  pickup: '📦',
-  dropoff: '🏁',
-  fuel: '⛽',
-  rest: '🛏️',
-  cycle_reset: '🔄',
-};
-
-export default function RouteMap({ route, stops }) {
-  const mapRef = useRef(null);
+export default function RouteMap({ route, stops, visible }) {
+  const mapRef         = useRef(null);
   const mapInstanceRef = useRef(null);
 
+  // Re-invalidate size when tab becomes visible
+  useEffect(() => {
+    if (visible && mapInstanceRef.current) {
+      setTimeout(() => mapInstanceRef.current?.invalidateSize(), 50);
+    }
+  }, [visible]);
+
+  // Build the map once per route
   useEffect(() => {
     if (!window.L) return;
     const L = window.L;
@@ -42,38 +41,25 @@ export default function RouteMap({ route, stops }) {
 
     const bounds = [];
 
-    // Draw route geometry
     if (route.geometry && route.geometry.coordinates) {
       const latlngs = route.geometry.coordinates.map(([lon, lat]) => [lat, lon]);
-      L.polyline(latlngs, {
-        color: '#2563eb',
-        weight: 4,
-        opacity: 0.8,
-        dashArray: null,
-      }).addTo(map);
+      L.polyline(latlngs, { color: '#1d4ed8', weight: 4, opacity: 0.85 }).addTo(map);
       latlngs.forEach(ll => bounds.push(ll));
     }
 
-    // Add waypoint markers
     route.waypoints.forEach((wp) => {
-      const color = STOP_COLORS[wp.type] || '#2563eb';
+      const color = STOP_COLORS[wp.type] || '#1e293b';
       const icon = L.divIcon({
         className: '',
-        html: `<div style="
-          background:${color};
-          width:14px;height:14px;
-          border-radius:50%;
-          border:3px solid white;
-          box-shadow:0 2px 8px rgba(0,0,0,0.3);
-        "></div>`,
+        html: `<div style="background:${color};width:14px;height:14px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.35);"></div>`,
         iconSize: [14, 14],
         iconAnchor: [7, 7],
       });
       const marker = L.marker([wp.lat, wp.lon], { icon }).addTo(map);
       marker.bindPopup(`
-        <div style="font-family:Inter,sans-serif;min-width:160px">
-          <div style="font-weight:600;color:#1a2744;margin-bottom:4px;text-transform:capitalize">${wp.type} Location</div>
-          <div style="font-size:0.82rem;color:#64748b">${wp.label}</div>
+        <div style="font-family:Inter,sans-serif;min-width:150px">
+          <strong style="color:#0f172a;text-transform:capitalize">${wp.type}</strong><br/>
+          <span style="font-size:0.8rem;color:#64748b">${wp.label}</span>
         </div>
       `);
       bounds.push([wp.lat, wp.lon]);
@@ -83,6 +69,9 @@ export default function RouteMap({ route, stops }) {
       map.fitBounds(bounds, { padding: [40, 40] });
     }
 
+    // KEY FIX: call invalidateSize after the container is painted
+    setTimeout(() => mapInstanceRef.current?.invalidateSize(), 100);
+
     return () => {
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
@@ -91,25 +80,22 @@ export default function RouteMap({ route, stops }) {
     };
   }, [route, stops]);
 
-  // Load Leaflet dynamically if not present
+  // Load Leaflet dynamically if not already on page
   useEffect(() => {
     if (!window.L) {
       const script = document.createElement('script');
       script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-      script.onload = () => {
-        // trigger re-render
-        window.dispatchEvent(new Event('leaflet-loaded'));
-      };
+      script.onload = () => window.dispatchEvent(new Event('leaflet-loaded'));
       document.head.appendChild(script);
     }
   }, []);
 
   const stopTypes = [
-    { type: 'current', label: 'Current' },
-    { type: 'pickup', label: 'Pickup' },
+    { type: 'current', label: 'Current Location' },
+    { type: 'pickup',  label: 'Pickup' },
     { type: 'dropoff', label: 'Dropoff' },
-    { type: 'fuel', label: 'Fuel Stop' },
-    { type: 'rest', label: 'Rest Stop' },
+    { type: 'fuel',    label: 'Fuel Stop' },
+    { type: 'rest',    label: 'Rest Stop' },
   ];
 
   return (

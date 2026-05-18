@@ -86,8 +86,12 @@ export default function App() {
                   </button>
                 </div>
                 <div className="tab-content">
-                  {activeTab === 'map' && <RouteMap route={result.route} stops={result.stops} />}
-                  {activeTab === 'logs' && <ELDLogs logs={result.logs} summary={result.summary} />}
+                  <div style={{ display: activeTab === 'map' ? 'block' : 'none' }}>
+                    <RouteMap route={result.route} stops={result.stops} visible={activeTab === 'map'} />
+                  </div>
+                  <div style={{ display: activeTab === 'logs' ? 'block' : 'none' }}>
+                    <ELDLogs logs={result.logs} summary={result.summary} />
+                  </div>
                 </div>
               </>
             )}
