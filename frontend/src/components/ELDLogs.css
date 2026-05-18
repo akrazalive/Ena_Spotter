@@ -1,0 +1,29 @@
+.eld-logs { }
+
+.eld-logs-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: 16px 24px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow);
+}
+
+.eld-logs-header h3 { color: var(--navy); font-size: 1.1rem; }
+.eld-logs-header p { color: var(--text-muted); font-size: 0.82rem; margin-top: 2px; }
+
+.print-btn {
+  padding: 9px 18px;
+  background: var(--navy);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.print-btn:hover { opacity: 0.85; }
