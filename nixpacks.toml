@@ -1,0 +1,16 @@
+[phases.setup]
+nixPkgs = ["python311", "nodejs_20"]
+
+[phases.install]
+cmds = [
+  "pip install -r backend/requirements.txt",
+  "cd frontend && npm install && npm run build"
+]
+
+[phases.build]
+cmds = [
+  "cd backend && python manage.py collectstatic --noinput"
+]
+
+[start]
+cmd = "cd backend && gunicorn config.wsgi --bind 0.0.0.0:$PORT --log-file -"

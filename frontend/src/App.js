@@ -3,6 +3,7 @@ import TripForm from './components/TripForm';
 import RouteMap from './components/RouteMap';
 import ELDLogs from './components/ELDLogs';
 import TripSummary from './components/TripSummary';
+import { API_BASE } from './api';
 import './App.css';
 
 export default function App() {
@@ -16,7 +17,7 @@ export default function App() {
     setError('');
     setResult(null);
     try {
-      const res = await fetch('/api/trip/plan/', {
+      const res = await fetch(`${API_BASE}/api/trip/plan/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),

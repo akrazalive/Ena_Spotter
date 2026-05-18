@@ -69,6 +69,10 @@ STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
+# Serve React build
+REACT_BUILD_DIR = BASE_DIR.parent / 'frontend' / 'build'
+STATICFILES_DIRS = [REACT_BUILD_DIR / 'static'] if (REACT_BUILD_DIR / 'static').exists() else []
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CORS_ALLOW_ALL_ORIGINS = True
