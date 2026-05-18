@@ -37,16 +37,16 @@ export default function App() {
     <div className="app">
       <header className="app-header">
         <div className="header-inner">
-          <div className="logo">
-            <span className="logo-icon">🚛</span>
+        <div className="logo">
+            <div className="logo-mark">🚛</div>
             <div>
               <h1>ELD Trip Planner</h1>
               <p>Hours of Service Log Generator</p>
             </div>
           </div>
-          <div className="header-badge">
-            <span>70 hrs / 8 days</span>
-            <span>Property Carrier</span>
+          <div className="header-badges">
+            <span className="header-badge">70 hrs / 8 days</span>
+            <span className="header-badge">Property Carrier</span>
           </div>
         </div>
       </header>

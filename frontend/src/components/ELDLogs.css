@@ -6,24 +6,25 @@
   justify-content: space-between;
   background: var(--bg-card);
   border-radius: var(--radius-lg);
-  padding: 16px 24px;
-  margin-bottom: 16px;
-  box-shadow: var(--shadow);
+  padding: 14px 20px;
+  margin-bottom: 14px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
 }
 
-.eld-logs-header h3 { color: var(--navy); font-size: 1.1rem; }
-.eld-logs-header p { color: var(--text-muted); font-size: 0.82rem; margin-top: 2px; }
+.eld-logs-header h3 { color: var(--text); font-size: 1rem; }
+.eld-logs-header p { color: var(--text-muted); font-size: 0.78rem; margin-top: 2px; font-family: 'Inter', sans-serif; }
 
 .print-btn {
-  padding: 9px 18px;
-  background: var(--navy);
+  padding: 8px 16px;
+  background: var(--slate-900);
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: 7px;
   font-family: 'Inter', sans-serif;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   font-weight: 500;
   cursor: pointer;
-  transition: opacity 0.2s;
+  transition: background 0.15s;
 }
-.print-btn:hover { opacity: 0.85; }
+.print-btn:hover { background: var(--slate-700); }
