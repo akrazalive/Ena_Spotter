@@ -9,35 +9,30 @@ SERPAPI_KEY = settings.SERPAPI_KEY
 
 
 def serpapi_autocomplete(query):
-    """Return place suggestions using Nominatim autocomplete (free, worldwide, no key needed)."""
+    """Return place suggestions with lat/lon using SerpAPI Google Maps Autocomplete."""
     try:
         resp = requests.get(
-            'https://nominatim.openstreetmap.org/search',
+            'https://serpapi.com/search',
             params={
+                'engine': 'google_maps_autocomplete',
                 'q': query,
-                'format': 'json',
-                'limit': 7,
-                'addressdetails': 1,
+                'll': '@39.5,-98.35,4z',  # default center (USA), zoomed out for worldwide results
+                'api_key': SERPAPI_KEY,
             },
-            headers={'User-Agent': 'ELDTripPlanner/1.0'},
-            timeout=6,
+            timeout=8,
         )
         data = resp.json()
         suggestions = []
-        for item in data:
-            addr = item.get('address', {})
-            # Build a clean label
-            parts = []
-            for key in ('city', 'town', 'village', 'county', 'state', 'country'):
-                if addr.get(key):
-                    parts.append(addr[key])
-            label = parts[0] if parts else item.get('display_name', query).split(',')[0]
-            subtext = ', '.join(parts[1:4]) if len(parts) > 1 else item.get('display_name', '').split(',', 1)[-1].strip()
+        for s in data.get('suggestions', []):
+            if not s.get('latitude'):
+                continue
+            label = s.get('value', '')
+            subtext = s.get('subtext', '')
             suggestions.append({
                 'label': label,
-                'subtext': subtext[:60],
-                'lat': float(item['lat']),
-                'lon': float(item['lon']),
+                'subtext': subtext,
+                'lat': s['latitude'],
+                'lon': s['longitude'],
             })
         return suggestions
     except Exception:
@@ -45,7 +40,7 @@ def serpapi_autocomplete(query):
 
 
 def serpapi_geocode(location_str):
-    """Geocode a location string via SerpAPI Google Maps search. Returns (lat, lon, display_name)."""
+    """Geocode via SerpAPI Google Maps search. Returns (lat, lon, display_name)."""
     try:
         resp = requests.get(
             'https://serpapi.com/search',
@@ -58,22 +53,17 @@ def serpapi_geocode(location_str):
             timeout=10,
         )
         data = resp.json()
-        # Try place_results first (most accurate)
-        place = data.get('place_results')
-        if place and place.get('gps_coordinates'):
-            coords = place['gps_coordinates']
+        place = data.get('place_results', {})
+        coords = place.get('gps_coordinates', {})
+        if coords.get('latitude'):
             return coords['latitude'], coords['longitude'], place.get('title', location_str)
-        # Fall back to first local result
-        local = data.get('local_results', [])
-        if local:
-            first = local[0]
-            coords = first.get('gps_coordinates', {})
-            if coords.get('latitude'):
-                return coords['latitude'], coords['longitude'], first.get('title', location_str)
+        for item in data.get('local_results', []):
+            c = item.get('gps_coordinates', {})
+            if c.get('latitude'):
+                return c['latitude'], c['longitude'], item.get('title', location_str)
     except Exception:
         pass
-
-    # Final fallback: Nominatim
+    # Fallback to Nominatim
     return nominatim_geocode(location_str)
 
 
